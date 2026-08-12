@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # 1. Control Plane Ingress REST & SSE Gateway Microservice + UI
+  control-plane-gateway:
+    build: .
+    container_name: agentmesh-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+    restart: always
+
+  # 2. gRPC Control Plane Microservice
+  grpc-control-plane:
+    build: .
+    container_name: agentmesh-grpc
+    command: python -m grpc_service.main
+    ports:
+      - "50051:50051"
+    environment:
+      - GRPC_PORT=50051
+    restart: always
+
+  # 3. Worker Node Microservice (General Worker Pool)
+  worker-general:
+    build: .
+    container_name: agentmesh-worker-general
+    command: python workers/worker_agent.py
+    environment:
+      - CONTROL_PLANE_URL=http://control-plane-gateway:8000
+      - WORKER_ID=wrk_docker_general_01
+      - AGENT_TYPE=general_worker
+      - POLL_INTERVAL=2.0
+    depends_on:
+      - control-plane-gateway
+    restart: always
+
+  # 4. Worker Node Microservice (Infra Deployer Pool)
+  worker-infra:
+    build: .
+    container_name: agentmesh-worker-infra
+    command: python workers/worker_agent.py
+    environment:
+      - CONTROL_PLANE_URL=http://control-plane-gateway:8000
+      - WORKER_ID=wrk_docker_infra_01
+      - AGENT_TYPE=infra_deployer
+      - POLL_INTERVAL=2.0
+    depends_on:
+      - control-plane-gateway
+    restart: always
+
+networks:
+  default:
+    name: agentmesh-network

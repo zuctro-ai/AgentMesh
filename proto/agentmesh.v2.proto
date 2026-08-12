@@ -1,0 +1,85 @@
+syntax = "proto3";
+
+package agentmesh.v2;
+
+option go_package = "github.com/zuctro/agentmesh/gen/v2;agentmeshv2";
+
+service AgentMeshControlPlane {
+  rpc SubmitTask (SubmitTaskRequest) returns (SubmitTaskResponse);
+  rpc PollTask (PollTaskRequest) returns (PollTaskResponse);
+  rpc SubmitResult (SubmitResultRequest) returns (SubmitResultResponse);
+  rpc SubmitHITLDecision (HITLDecisionRequest) returns (HITLDecisionResponse);
+  rpc StreamTaskEvents (StreamTaskEventsRequest) returns (stream TaskEvent);
+}
+
+message TaskEnvelope {
+  string task_id = 1;
+  string parent_task_id = 2;
+  string tenant_id = 3;
+  string cost_center = 4;
+  string agent_type = 5;
+  int32 priority = 6;
+  string status = 7;
+  string instruction = 8;
+  string context_json = 9;
+  int64 created_at = 10;
+}
+
+message SubmitTaskRequest {
+  TaskEnvelope task = 1;
+}
+
+message SubmitTaskResponse {
+  string task_id = 1;
+  string status = 2;
+  string message = 3;
+}
+
+message PollTaskRequest {
+  string worker_id = 1;
+  string agent_type = 2;
+}
+
+message PollTaskResponse {
+  TaskEnvelope task = 1;
+}
+
+message SubmitResultRequest {
+  string worker_id = 1;
+  string task_id = 2;
+  string status = 3;
+  string result_json = 4;
+  int32 prompt_tokens = 5;
+  int32 completion_tokens = 6;
+  double cost_usd = 7;
+  string error_message = 8;
+}
+
+message SubmitResultResponse {
+  bool acknowledged = 1;
+}
+
+message HITLDecisionRequest {
+  string task_id = 1;
+  string decision = 2;
+  string operator_id = 3;
+  string reason = 4;
+}
+
+message HITLDecisionResponse {
+  bool success = 1;
+  string new_status = 2;
+}
+
+message StreamTaskEventsRequest {
+  string task_id = 1;
+}
+
+message TaskEvent {
+  string task_id = 1;
+  string status = 2;
+  int32 prompt_tokens = 3;
+  int32 completion_tokens = 4;
+  double cost_usd = 5;
+  string payload_json = 6;
+}

@@ -49,37 +49,6 @@ class GovernanceInterceptor:
         return True, "Task passed governance check"
 
     @classmethod
-    def check_prompt_injection(cls, text: str, threshold: float = 0.85) -> Tuple[bool, float]:
-        patterns = [
-            r'(?i)ignore\s+previous\s+instructions',
-            r'(?i)disregard\s+system\s+prompt',
-            r'(?i)jailbreak',
-            r'(?i)override\s+safety\s+policy',
-            r'(?i)bypass\s+security\s+filter',
-            r'(?i)developer\s+mode\s+enabled',
-            r'(?i)sudo\s+execute'
-        ]
-        score = 0.0
-        matches = sum(1 for p in patterns if re.search(p, text))
-        if matches == 1:
-            score = 0.88
-        elif matches > 1:
-            score = 0.98
-
-        is_injection = score >= threshold
-        return is_injection, score
-
-    @classmethod
-    def check_budget_on_result(cls, task: AgentTask, additional_tokens: int, additional_cost: float) -> bool:
-        new_tokens = task.telemetry.total_tokens + additional_tokens
-        new_cost = task.telemetry.total_cost_usd + additional_cost
-        if new_tokens > task.governance.max_token_budget:
-            return True
-        if new_cost > task.governance.max_cost_usd:
-            return True
-        return False
-
-    @classmethod
     def check_token_budget_exceeded(cls, task: AgentTask, additional_tokens: int, estimated_cost: float) -> bool:
         new_total_tokens = task.telemetry.total_tokens + additional_tokens
         new_total_cost = task.telemetry.total_cost_usd + estimated_cost
@@ -90,4 +59,3 @@ class GovernanceInterceptor:
             return True
             
         return False
-

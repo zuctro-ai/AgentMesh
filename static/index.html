@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zuctro AgentMesh | Enterprise Control Plane & Governance Gateway</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body class="dark-theme">
+  <!-- Top Navigation Header -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="logo-icon">🛡️</div>
+      <div class="brand-text">
+        <span class="company">ZUCTRO AI</span>
+        <span class="product">AgentMesh Control Plane <span class="badge">AM-CP-v2.5</span></span>
+      </div>
+    </div>
+    
+    <div class="system-pills">
+      <div class="pill green" id="pill-status">
+        <span class="dot pulse"></span> Gateway: <strong id="val-status">HEALTHY</strong>
+      </div>
+      <div class="pill blue">
+        ⚡ Queued: <strong id="val-queued">0</strong>
+      </div>
+      <div class="pill purple">
+        🤖 Workers: <strong id="val-workers">0 Active</strong>
+      </div>
+      <div class="pill gold">
+        💰 Total Spent: $<strong id="val-spent">0.0000</strong>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Layout -->
+  <div class="app-container">
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar">
+      <button class="nav-item active" data-tab="tab-tasks">
+        <span class="icon">🚀</span> Task Console
+      </button>
+      <button class="nav-item" data-tab="tab-hitl">
+        <span class="icon">🛡️</span> HITL Approval Gate
+        <span class="hitl-badge" id="hitl-count" style="display: none;">0</span>
+      </button>
+      <button class="nav-item" data-tab="tab-workers">
+        <span class="icon">🤖</span> Worker Node Simulator
+      </button>
+      <button class="nav-item" data-tab="tab-mcp">
+        <span class="icon">🔌</span> MCP Tool Gateway
+      </button>
+      <button class="nav-item" data-tab="tab-telemetry">
+        <span class="icon">📊</span> Showback & Telemetry
+      </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+      
+      <!-- TAB 1: TASK CONSOLE -->
+      <section id="tab-tasks" class="tab-pane active">
+        <div class="pane-header">
+          <h2>Task Submission & Real-time Execution Pipeline</h2>
+          <p class="subtitle">Submit multi-agent tasks, inspect declarative governance interceptors, and stream SSE event traces.</p>
+        </div>
+
+        <div class="grid-2col">
+          <!-- Submit Form -->
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3>Submit New Task</h3>
+              <div class="quick-presets">
+                <button class="btn btn-sm btn-outline" id="preset-pii">PII Test</button>
+                <button class="btn btn-sm btn-outline" id="preset-hitl">HITL Trigger</button>
+                <button class="btn btn-sm btn-outline" id="preset-injection">Prompt Injection</button>
+              </div>
+            </div>
+
+            <form id="task-form">
+              <div class="form-group">
+                <label for="task-instruction">Task Instruction</label>
+                <textarea id="task-instruction" rows="3" placeholder="Enter task instruction for agent pool..." required></textarea>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="task-agent-type">Target Agent Pool</label>
+                  <select id="task-agent-type">
+                    <option value="code_reviewer">Code Reviewer Pool</option>
+                    <option value="data_analyst">Data Analyst Pool</option>
+                    <option value="infra_deployer">Infra Deployer Pool</option>
+                    <option value="general_worker" selected>General Worker Pool</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label for="task-priority">Priority (1-5)</label>
+                  <select id="task-priority">
+                    <option value="1">1 - Normal</option>
+                    <option value="3">3 - Medium</option>
+                    <option value="5" selected>5 - High Priority</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="task-tenant">Tenant ID</label>
+                  <input type="text" id="task-tenant" value="org_engineering">
+                </div>
+                <div class="form-group">
+                  <label for="task-cost-center">Cost Center</label>
+                  <input type="text" id="task-cost-center" value="cc_devops_402">
+                </div>
+              </div>
+
+              <div class="governance-options">
+                <h4>Declarative Guardrail Overrides</h4>
+                <div class="toggle-group">
+                  <label><input type="checkbox" id="gov-pii" checked> PII Masking</label>
+                  <label><input type="checkbox" id="gov-injection" checked> OWASP Injection Shield</label>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="gov-max-tokens">Max Tokens</label>
+                    <input type="number" id="gov-max-tokens" value="50000">
+                  </div>
+                  <div class="form-group">
+                    <label for="gov-max-cost">Max Cost ($)</label>
+                    <input type="number" step="0.01" id="gov-max-cost" value="0.50">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="gov-hitl-tools">Require HITL for Tools (comma separated)</label>
+                  <input type="text" id="gov-hitl-tools" value="execute_sql_mutation, git_push_production, deploy_cloud_infrastructure">
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block">🚀 Submit Task to Control Plane</button>
+            </form>
+          </div>
+
+          <!-- Task Status & Real-time Live Log -->
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3>Live Task Inspector & Event Stream</h3>
+              <span id="active-task-badge" class="status-tag tag-gray">No Active Task</span>
+            </div>
+
+            <div id="task-detail-panel" class="detail-panel empty-state">
+              <div class="empty-icon">📡</div>
+              <p>Submit a task to observe governance sanitization, status transitions, and SSE event streaming in real time.</p>
+            </div>
+
+            <div class="log-header">
+              <h4>Real-Time SSE Event Log</h4>
+              <button class="btn btn-xs btn-outline" id="clear-logs">Clear</button>
+            </div>
+            <div id="event-log-container" class="log-container">
+              <div class="log-entry system-log">Waiting for task submission...</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: HITL APPROVAL GATE -->
+      <section id="tab-hitl" class="tab-pane">
+        <div class="pane-header">
+          <h2>Human-in-the-Loop (HITL) Governance Gate</h2>
+          <p class="subtitle">Interception queue for high-risk agent actions requiring explicit operator sign-off.</p>
+        </div>
+
+        <div class="card glass-card">
+          <div class="card-header">
+            <h3>Pending HITL Authorization Requests</h3>
+            <button class="btn btn-sm btn-outline" id="refresh-hitl">🔄 Refresh Queue</button>
+          </div>
+
+          <div id="hitl-list-container">
+            <div class="empty-state">
+              <div class="empty-icon">🛡️</div>
+              <p>No tasks currently waiting for HITL approval.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: WORKER NODE SIMULATOR -->
+      <section id="tab-workers" class="tab-pane">
+        <div class="pane-header">
+          <h2>Worker Pod Pool & Agent Simulator</h2>
+          <p class="subtitle">Simulate Kubernetes-scale worker nodes polling for tasks and executing multi-agent reasoning steps.</p>
+        </div>
+
+        <div class="grid-2col">
+          <!-- Worker Registration & Controls -->
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3>Simulated Worker Node Controls</h3>
+            </div>
+            
+            <div class="form-group">
+              <label for="sim-worker-id">Worker Node ID</label>
+              <input type="text" id="sim-worker-id" value="wrk_k8s_node_01">
+            </div>
+
+            <div class="form-group">
+              <label for="sim-agent-type">Supported Agent Type</label>
+              <select id="sim-agent-type">
+                <option value="general_worker">general_worker</option>
+                <option value="code_reviewer">code_reviewer</option>
+                <option value="data_analyst">data_analyst</option>
+                <option value="infra_deployer">infra_deployer</option>
+              </select>
+            </div>
+
+            <div class="action-row">
+              <button class="btn btn-primary" id="btn-poll-task">🔄 Poll Next Task</button>
+              <button class="btn btn-secondary" id="btn-auto-worker">▶ Toggle Auto-Worker</button>
+            </div>
+
+            <div id="current-polled-task" class="polled-task-box empty">
+              <p class="placeholder-text">No task currently assigned to worker.</p>
+            </div>
+
+            <div class="submit-result-box hidden" id="result-submit-form">
+              <h4>Submit Worker Task Result</h4>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="res-prompt-tokens">Prompt Tokens</label>
+                  <input type="number" id="res-prompt-tokens" value="450">
+                </div>
+                <div class="form-group">
+                  <label for="res-comp-tokens">Completion Tokens</label>
+                  <input type="number" id="res-comp-tokens" value="180">
+                </div>
+                <div class="form-group">
+                  <label for="res-cost-usd">Cost ($)</label>
+                  <input type="number" step="0.001" id="res-cost-usd" value="0.008">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="res-json">Result Payload (JSON)</label>
+                <textarea id="res-json" rows="2">{"status": "SUCCESS", "output": "Execution completed successfully."}</textarea>
+              </div>
+
+              <div class="button-group">
+                <button class="btn btn-success" id="btn-submit-success">✅ Submit Success</button>
+                <button class="btn btn-danger" id="btn-submit-failed">❌ Submit Failure</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Registered Workers -->
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3>Registered Cluster Workers</h3>
+              <button class="btn btn-sm btn-outline" id="refresh-workers">🔄 Refresh</button>
+            </div>
+            <div id="workers-list-table">
+              <div class="empty-state"><p>No workers registered yet.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: MCP TOOL GATEWAY -->
+      <section id="tab-mcp" class="tab-pane">
+        <div class="pane-header">
+          <h2>Model Context Protocol (MCP) Proxy Gateway</h2>
+          <p class="subtitle">Centralized proxy for inspecting, filtering, and executing enterprise MCP tool calls.</p>
+        </div>
+
+        <div class="grid-2col">
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3>Registered Enterprise MCP Tools</h3>
+              <button class="btn btn-sm btn-outline" id="refresh-mcp">🔄 Load Tools</button>
+            </div>
+            <div id="mcp-tools-list">
+              <div class="empty-state"><p>Loading MCP tools registry...</p></div>
+            </div>
+          </div>
+
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3>Invoke MCP Tool via Proxy</h3>
+            </div>
+            <form id="mcp-call-form">
+              <div class="form-group">
+                <label for="mcp-select-tool">Target MCP Tool</label>
+                <select id="mcp-select-tool">
+                  <option value="query_db">query_db</option>
+                  <option value="execute_sql_mutation">execute_sql_mutation</option>
+                  <option value="git_push_production">git_push_production</option>
+                  <option value="deploy_cloud_infrastructure">deploy_cloud_infrastructure</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="mcp-args-json">Tool Arguments (JSON)</label>
+                <textarea id="mcp-args-json" rows="3">{"query": "SELECT * FROM users WHERE email = 'jane.doe@company.com' AND card = '4532-1234-5678-9010'"}</textarea>
+              </div>
+
+              <div class="form-group">
+                <label><input type="checkbox" id="mcp-pii-check" checked> Sanitize PII in Arguments</label>
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block">🔌 Proxy MCP Call</button>
+            </form>
+
+            <div id="mcp-call-result" class="mcp-result-box hidden">
+              <h4>Call Result</h4>
+              <pre id="mcp-result-code"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: SHOWBACK & TELEMETRY -->
+      <section id="tab-telemetry" class="tab-pane">
+        <div class="pane-header">
+          <h2>Enterprise Showback / Chargeback & Telemetry</h2>
+          <p class="subtitle">FinOps accounting breakdown by tenant, cost center, and OpenTelemetry trace metrics.</p>
+        </div>
+
+        <div class="grid-2col">
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3>System Counters & Financial Ledger</h3>
+            </div>
+            <div id="telemetry-summary-cards" class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Total Tasks</div>
+                <div class="metric-value" id="m-total-tasks">0</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Completed</div>
+                <div class="metric-value text-green" id="m-completed-tasks">0</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Failed / DLQ</div>
+                <div class="metric-value text-red" id="m-failed-tasks">0</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Tokens Burned</div>
+                <div class="metric-value text-purple" id="m-tokens">0</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3>Department Chargeback Breakdown</h3>
+              <button class="btn btn-sm btn-outline" id="refresh-chargeback">🔄 Refresh Report</button>
+            </div>
+            <div id="chargeback-report-table">
+              <div class="empty-state"><p>No chargeback data recorded yet.</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

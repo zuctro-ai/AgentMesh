@@ -13,9 +13,8 @@
 1. **Declarative Plugin Architecture:** Reusable YAML plugins for PII sanitization, OWASP prompt injection shields, token budget capping, and HITL approval routing.
 2. **Model Context Protocol (MCP) Proxy Gateway:** Centralized proxying, tool discovery filtering (`tools/list`), parameter sanitization, and HITL authorization for MCP tool calls (`tools/call`).
 3. **Kubernetes Scale-to-Zero Pod Execution:** Dynamic worker pod lifecycle managed via KEDA based on queue depth metrics (`agentmesh_queued_tasks > 0`) with container sandbox isolation (`gVisor` / `Kata`).
-4. **gRPC & REST Dual Protocol Support:** Full parity between REST/SSE (`app.py`) and high-performance gRPC service (`agentmesh.v2.proto`).
-5. **SDK-Agnostic Worker Runtimes:** Orchestrate agents built in Python, TypeScript, Go, LangGraph, CrewAI, AutoGen, or custom scripts.
-6. **Real-Time Telemetry & Observability:** OpenTelemetry GenAI trace DAGs, Prometheus metrics, and enterprise showback/chargeback accounting.
+4. **SDK-Agnostic Worker Runtimes:** Orchestrate agents built in Python, TypeScript, Go, LangGraph, CrewAI, AutoGen, or custom scripts.
+5. **Real-Time Telemetry & Observability:** OpenTelemetry GenAI trace DAGs, Prometheus metrics, and enterprise showback/chargeback accounting.
 
 ---
 
@@ -25,27 +24,12 @@
 AgentMesh/
 ├── SPECIFICATION.md       # Zuctro AM-CP-v2.5 Enterprise Protocol Specification
 ├── architecture_plan.md   # System Architecture & Topology Guide
-├── app.py                 # Ingress REST API & SSE Streaming Gateway (FastAPI)
+├── app.py                 # Ingress API & REST Server (FastAPI)
 ├── core/
 │   ├── models.py          # AM-CP Data Contracts (Pydantic)
-│   ├── plugins.py         # Declarative Plugin Interceptor Pipeline & Engine
 │   ├── governance.py      # Governance Interceptor (PII & Token Budgets)
-│   ├── database.py        # State Store & Chargeback Accounting Ledger
-│   ├── orchestrator.py    # Async Priority Task Queue, HITL Pauser & DLQ Engine
-│   ├── mcp_gateway.py     # Model Context Protocol (MCP) Proxy Gateway
-│   └── telemetry.py       # OpenTelemetry AI Span Emitter
-├── proto/
-│   └── agentmesh.v2.proto # gRPC Protocol Contract
-├── grpc_service/
-│   └── server.py          # gRPC Server Implementation
-├── tests/                 # Unit, Property, and AM-CP-v2.5 Conformance Suite
-│   ├── test_models.py
-│   ├── test_plugins.py
-│   ├── test_governance.py
-│   ├── test_orchestrator.py
-│   ├── test_api.py
-│   ├── test_grpc.py
-│   └── test_conformance.py
+│   ├── database.py        # Telemetry & State Store
+│   └── orchestrator.py    # Async Priority Task Queue & DLQ Engine
 └── README.md              # Project Overview
 ```
 
@@ -56,24 +40,20 @@ AgentMesh/
 ### 1. Install Dependencies
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install fastapi uvicorn pydantic pyyaml hypothesis pytest httpx opentelemetry-api opentelemetry-sdk grpcio grpcio-tools pytest-asyncio
+pip install fastapi uvicorn pydantic
 ```
 
-### 2. Launch the REST & SSE Control Plane Gateway
+### 2. Launch the Control Plane Gateway
 
 ```bash
 uvicorn app:app --reload --port 8000
 ```
 
-Access the interactive API documentation at `http://localhost:8000/docs` and Prometheus metrics at `http://localhost:8000/metrics`.
+Access the interactive API documentation at `http://localhost:8000/docs`.
 
-### 3. Run the AM-CP-v2.5 Conformance & Test Suite
+### 3. Read the Protocol Specification Standard
 
-```bash
-PYTHONPATH=. pytest -v
-```
+Refer to [SPECIFICATION.md](SPECIFICATION.md) to implement compliant Control Plane Gateways or Worker Nodes in any language.
 
 ---
 

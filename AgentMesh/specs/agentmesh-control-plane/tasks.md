@@ -1,0 +1,148 @@
+# Implementation Plan
+
+- [x] 1. Extend core data models
+  - Add `cost_center: str`, `hitl_trigger_tool: Optional[str]` fields to `AgentTask`
+  - Add `AgentPluginBinding`, `PluginConfig` models for declarative plugin YAML config
+  - Add `HITLDecision`, `ChargebackRecord`, `TaskEvent` models
+  - Add `MCPTool`, `MCPToolCallRequest`, `MCPToolResult` models
+  - _Requirements: 1.5, 3.3, 4.1, 5.2, 7.2, 8.4_
+
+- [x] 1.1 Write property test for JSON round-trip on AgentTask and ChargebackRecord
+  - **Property 11: Task JSON Round-Trip**
+  - **Validates: Requirements 9.4, 5.6**
+
+- [x] 2. Implement Plugin Engine (`core/plugins.py`)
+  - [x] 2.1 Implement `BasePlugin` interface and `PluginResult` data class
+    - Define abstract `execute(task, config) -> PluginResult` interface
+    - _Requirements: 7.1_
+  - [x] 2.2 Implement `PIIRedactionPlugin`
+    - Reuse regex patterns from `core/governance.py`; apply to `instruction` and context fields
+    - _Requirements: 1.2_
+  - [x] 2.3 Write property test for PII redaction completeness
+    - **Property 1: PII Redaction Completeness**
+    - **Validates: Requirements 1.2**
+  - [x] 2.4 Implement `PromptInjectionShieldPlugin`
+    - Heuristic scorer returning `injection_score`; enforce vs shadow mode branching
+    - _Requirements: 1.6, 7.3, 7.4_
+  - [x] 2.5 Write property test for injection shield enforce/shadow modes
+    - **Property (covers 7.3, 7.4): Prompt Injection Mode Behavior**
+    - **Validates: Requirements 1.6, 7.3, 7.4**
+  - [x] 2.6 Implement `TokenBudgetCapperPlugin` and `HITLApprovalRouterPlugin`
+    - Token/cost validation; HITL tool name matching
+    - _Requirements: 2.5, 2.6, 3.1_
+  - [x] 2.7 Write property test for budget boundary enforcement
+    - **Property 3: Token Budget Enforcement Routes to DLQ**
+    - **Property 4: Cost Cap Enforcement Routes to DLQ**
+    - **Validates: Requirements 2.5, 2.6**
+  - [x] 2.8 Implement `MCPToolFilterPlugin`
+    - Filter tool list by tenant RBAC allowlist
+    - _Requirements: 4.1_
+  - [x] 2.9 Write property test for MCP tool filter allowlist restriction
+    - **Property 14: MCP Tool Filter Restricts to Allowlist**
+    - **Validates: Requirements 4.1**
+  - [x] 2.10 Implement `PluginEngine.load_binding(yaml_str)` and `run_pipeline(task)`
+    - YAML deserialization of `AgentPluginBinding`; ordered plugin execution
+    - _Requirements: 7.2_
+  - [x] 2.11 Write property test for plugin YAML round-trip
+    - **Property 10: Plugin YAML Round-Trip**
+    - **Validates: Requirements 7.5**
+
+- [x] 3. Extend Governance Interceptor (`core/governance.py`)
+  - Add `check_prompt_injection(text, threshold) -> Tuple[bool, float]` method
+  - Add `check_budget_on_result(task, tokens, cost) -> bool` method used post-result
+  - _Requirements: 1.6, 2.5, 2.6_
+
+- [x] 4. Extend Task Orchestrator (`core/orchestrator.py`)
+  - [x] 4.1 Add `pause_task_for_hitl(task_id, tool_name) -> AgentTask`
+    - Sets status to `WAITING_HITL`, records `hitl_trigger_tool`
+    - _Requirements: 3.1_
+  - [x] 4.2 Add `resume_task_from_hitl(task_id, decision, operator_id, reason) -> AgentTask`
+    - APPROVED → QUEUED and re-enqueue; REJECTED → FAILED with reason
+    - _Requirements: 3.3, 3.4_
+  - [x] 4.3 Write property test for HITL state machine round-trip
+    - **Property 7: HITL Pause Prevents Worker Dequeue**
+    - **Property 8: HITL Round-Trip (Approve Restores Queueable State)**
+    - **Validates: Requirements 3.2, 3.3**
+  - [x] 4.4 Add per-task SSE event queue (`event_bus: Dict[str, asyncio.Queue]`)
+    - Emit `TaskEvent` on every status transition
+    - _Requirements: 8.1, 8.4_
+  - [x] 4.5 Add background coroutine `expire_stale_hitl_tasks(timeout_seconds)`
+    - Scans WAITING_HITL tasks; transitions timed-out tasks to FAILED
+    - _Requirements: 3.5_
+  - [x] 4.6 Add background coroutine `expire_stale_workers(timeout_seconds)`
+    - Scans workers by last_heartbeat; transitions stale workers to OFFLINE
+    - _Requirements: 6.4_
+  - [x] 4.7 Write property test for priority queue ordering
+    - **Property 5: Priority Queue Ordering**
+    - **Validates: Requirements 2.1**
+  - [x] 4.8 Write property test for retry-to-DLQ lifecycle
+    - **Property 6: Retry Count Monotonically Increases to DLQ**
+    - **Validates: Requirements 2.3, 2.4**
+
+- [x] 5. Extend Database Store (`core/database.py`)
+  - Add `save_chargeback(record: ChargebackRecord)` and `get_chargeback_report(start_time) -> dict`
+  - Add `save_worker`, `get_all_workers`, `update_worker_status` methods
+  - _Requirements: 5.2, 5.3, 6.1, 6.5_
+  - [x] 5.1 Write property test for chargeback attribution consistency
+    - **Property 9: Chargeback Attribution Consistency**
+    - **Validates: Requirements 5.2**
+
+- [x] 6. Implement MCP Proxy Gateway (`core/mcp_gateway.py`)
+  - `MCPGateway.list_tools(tenant_id, rbac_policy)` — RBAC filtered tool list
+  - `MCPGateway.call_tool(tenant_id, tool_name, arguments, pii_redact)` — proxied call with PII sanitization, audit logging
+  - _Requirements: 4.1, 4.2, 4.4_
+
+- [x] 7. Implement Telemetry Emitter (`core/telemetry.py`)
+  - `OTelEmitter.emit_task_span(task, prev_status, new_status)` using `opentelemetry-sdk`
+  - `OTelEmitter.emit_plugin_span(plugin_name, task_id, result)`
+  - Wire emitter calls into orchestrator status transitions
+  - _Requirements: 5.5_
+  - [x] 7.1 Write property test for OTel span emission on status transitions
+    - **Property (covers 5.5): OTel Span Emitted Per Transition**
+    - **Validates: Requirements 5.5**
+
+- [x] 8. Extend REST API (`app.py`)
+  - [x] 8.1 Add `POST /v1/hitl/{task_id}/decision` endpoint
+    - Accepts `HITLDecision`; delegates to `orchestrator.resume_task_from_hitl`
+    - Returns 409 if task not in WAITING_HITL state
+    - _Requirements: 3.3, 3.4_
+  - [x] 8.2 Add `GET /v1/tasks/{task_id}/stream` SSE endpoint
+    - Subscribes to per-task event queue; yields `TaskEvent` as SSE; closes on terminal state
+    - Returns 404 for unknown task_id
+    - _Requirements: 8.1, 8.2, 8.3, 8.4_
+  - [x] 8.3 Write property test for SSE stream completeness
+    - **Property 13: SSE Stream Completeness**
+    - **Validates: Requirements 8.1, 8.2**
+  - [x] 8.4 Add `GET /v1/mcp/tools` and `POST /v1/mcp/tools/call` endpoints
+    - Delegates to `MCPGateway`
+    - _Requirements: 4.1, 4.2, 4.3_
+  - [x] 8.5 Add `GET /v1/workers` endpoint
+    - Returns all workers via `db.get_all_workers()`
+    - _Requirements: 6.5_
+  - [x] 8.6 Add `GET /v1/metrics/chargeback` endpoint
+    - Accepts `start_time` query param; delegates to `db.get_chargeback_report()`
+    - _Requirements: 5.3_
+  - [x] 8.7 Wire plugin engine into `POST /v1/tasks` submission path
+    - Replace direct `GovernanceInterceptor` call with `PluginEngine.run_pipeline(task)`
+    - _Requirements: 1.1, 1.2, 1.6, 7.2_
+
+- [x] 9. Checkpoint — Ensure all tests pass, ask the user if questions arise.
+
+- [x] 10. Implement gRPC Service (`grpc_service/server.py`)
+  - Generate Python stubs from `agentmesh.v2.proto` using `grpcio-tools`
+  - Implement `AgentMeshControlPlane` servicer: `SubmitTask`, `PollTask`, `SubmitResult`, `SubmitHITLDecision`, `StreamTaskEvents`
+  - Each method delegates to the existing orchestrator and database layer
+  - _Requirements: 9.2_
+  - [x] 10.1 Write property test for gRPC TaskEnvelope round-trip
+    - **Property 12: gRPC TaskEnvelope Round-Trip**
+    - **Validates: Requirements 9.3**
+
+- [x] 11. Wire worker lifecycle updates into polling and result submission paths
+  - On poll: call `db.update_worker_status(worker_id, BUSY, task_id)` and heartbeat update
+  - On result submit: call `db.update_worker_status(worker_id, IDLE, None)` and increment task counts
+  - _Requirements: 6.1, 6.2, 6.3_
+  - [x] 11.1 Write property test for worker state round-trip
+    - **Property (covers 6.2, 6.3): Worker Status Round-Trip**
+    - **Validates: Requirements 6.2, 6.3**
+
+- [x] 12. Final Checkpoint — Ensure all tests pass, ask the user if questions arise.

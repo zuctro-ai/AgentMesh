@@ -31,69 +31,6 @@ class GovernancePolicy(BaseModel):
     require_hitl_for_tools: List[str] = Field(default_factory=list, description="Tools requiring human approval")
 
 
-class PluginConfig(BaseModel):
-    name: str
-    enabled: bool = True
-    config: Dict[str, Any] = Field(default_factory=dict)
-
-
-class AgentPluginBinding(BaseModel):
-    name: str
-    target_agent_type: str = "*"
-    plugins: List[PluginConfig] = Field(default_factory=list)
-
-
-class HITLDecision(BaseModel):
-    task_id: str
-    decision: str = Field(..., description="APPROVED or REJECTED")
-    operator_id: str
-    reason: Optional[str] = None
-
-
-class ChargebackRecord(BaseModel):
-    task_id: str
-    tenant_id: str
-    cost_center: str = "default"
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    total_tokens: int = 0
-    cost_usd: float = 0.0
-    timestamp: float = Field(default_factory=time.time)
-
-
-class TaskEvent(BaseModel):
-    task_id: str
-    status: str
-    tenant_id: str = "default_tenant"
-    prompt_tokens: int = 0
-    completion_tokens: int = 0
-    cost_usd: float = 0.0
-    payload_json: Optional[str] = None
-    timestamp: str = Field(default_factory=lambda: time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()))
-
-
-class MCPTool(BaseModel):
-    name: str
-    description: str
-    parameters_schema: Dict[str, Any] = Field(default_factory=dict)
-    required_rbac_role: Optional[str] = None
-
-
-class MCPToolCallRequest(BaseModel):
-    tenant_id: str = "default_tenant"
-    tool_name: str
-    arguments: Dict[str, Any] = Field(default_factory=dict)
-    pii_redact: bool = True
-
-
-class MCPToolResult(BaseModel):
-    tool_name: str
-    success: bool
-    result_data: Dict[str, Any] = Field(default_factory=dict)
-    redactions: List[str] = Field(default_factory=list)
-    error_message: Optional[str] = None
-
-
 class TelemetryMetrics(BaseModel):
     prompt_tokens: int = 0
     completion_tokens: int = 0
@@ -113,14 +50,12 @@ class AgentTask(BaseModel):
     task_id: str = Field(default_factory=lambda: f"tsk_{uuid.uuid4().hex[:8]}")
     parent_task_id: Optional[str] = None
     tenant_id: str = "default_tenant"
-    cost_center: str = "default"
     agent_type: str = "general_worker"
     assigned_worker_id: Optional[str] = None
     status: TaskStatus = TaskStatus.PENDING
     priority: int = 1  # 1 = Normal, 5 = High Priority
     retries: int = 0
     max_retries: int = 3
-    hitl_trigger_tool: Optional[str] = None
     
     governance: GovernancePolicy = Field(default_factory=GovernancePolicy)
     payload: TaskPayload
@@ -141,4 +76,3 @@ class WorkerInfo(BaseModel):
     tasks_completed: int = 0
     total_tokens_processed: int = 0
     last_heartbeat: float = Field(default_factory=time.time)
-
