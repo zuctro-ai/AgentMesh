@@ -365,18 +365,73 @@ message TaskEvent {
 
 An implementation achieves **Zuctro AgentMesh AM-CP-v2.5 Certification** by passing 10 automated test benchmarks:
 
-1. **Declarative Plugin Test:** Policy changes applied via YAML MUST immediately take effect on gateway ingress.
-2. **K8s Scale-to-Zero Test:** 0 queued tasks MUST scale worker pods down to 0 replicas; enqueuing tasks MUST trigger pod creation.
-3. **PII Sanitization Test:** Raw email/credit card payloads MUST be masked before entering queue.
-4. **OWASP Prompt Injection Test:** Prompt injection payloads MUST be blocked in `ENFORCE` mode.
-5. **Token Budget Cap Test:** Tasks exceeding max token budget MUST abort to `DEAD_LETTER_QUEUE`.
-6. **HITL Interception Test:** Restricted tool invocation MUST pause task in `WAITING_HITL` state until approved.
-7. **MCP Proxy Gateway Test:** Model Context Protocol tool requests MUST be intercepted, logged, and sanitized.
-8. **LLM Provider Failover Test:** Primary LLM 500 error MUST trigger secondary provider failover seamlessly.
-9. **Showback/Chargeback Ledger Test:** Usage metrics MUST be accurate and grouped by `tenant_id` and `cost_center`.
-10. **OpenTelemetry Lineage Test:** Delegated parent-child task traces MUST preserve distributed tracing context.
+8. Global Command Line Interface (`agentmesh` CLI Spec)
+------------------------------------------------------
+
+Zuctro AgentMesh includes a native, standalone global CLI tool (`agentmesh`) packaged via PyPI / `setup.py` entry points.
+
+```bash
+# 1. Health & Metrics Inspection
+agentmesh status
+
+# 2. Submit Task & Stream SSE Events
+agentmesh task submit -i "Sanitize customer ticket JIRA-102" --agent-type data_analyst --follow
+
+# 3. Task Management & Inspection
+agentmesh task list --status WAITING_HITL
+agentmesh task inspect tsk_55436075
+agentmesh task stream tsk_55436075
+
+# 4. Human-in-the-Loop Operator Gate Management
+agentmesh hitl list
+agentmesh hitl approve tsk_af2bd402 --operator sec_admin --reason "Ticket CHG-9921 approved"
+agentmesh hitl reject tsk_af2bd402 --reason "Disallowed database drop"
+
+# 5. Model Context Protocol Tool Discovery
+agentmesh mcp list
+```
+
+---
+
+## 9. Governed OpenAI-Compatible LLM Gateway Proxy (`POST /v1/chat/completions`)
+
+Zuctro AgentMesh provides an inline **Governed LLM Gateway Proxy** compatible with standard OpenAI SDKs, LangChain, CrewAI, and AutoGen.
+
+```
+Client App (OpenAI SDK) ──▶ POST /v1/chat/completions (AgentMesh Proxy) ──▶ Upstream Target LLM Engine
+```
+
+### 9.1 Inline Governance Pipeline:
+1. **OWASP Prompt Injection Check:** Rejects injection attacks inline with `HTTP 422`.
+2. **Inline PII Sanitization:** Redacts sensitive email addresses, phone numbers, credit card details, and SSNs.
+3. **Usage & FinOps Attribution:** Automatically logs prompt/completion tokens and attributes cost ($) to `x-tenant-id` and `x-cost-center`.
+
+---
+
+## 10. Remote Model Context Protocol (MCP) Server Integration
+
+Zuctro AgentMesh acts as a centralized **MCP Gateway Proxy (AM-MCP-v1.0)** supporting remote MCP servers over HTTP, SSE, and stdio JSON-RPC.
+
+### 10.1 Remote Server Registration & Tool Discovery (`tools/list`):
+- `POST /v1/mcp/servers`: Register external MCP endpoints (e.g. Jira MCP, Confluence MCP, Postgres MCP, GitHub MCP).
+- `POST /v1/mcp/servers/{server_name}/sync`: Dynamically discover tools using standard MCP JSON-RPC (`tools/list`).
+- Built-in parameter PII redaction and HITL authorization on tool dispatch (`POST /v1/mcp/tools/call`).
+
+---
+
+## 11. Zuctro AgentMesh v3.0 Architecture Roadmap
+
+| Module | Feature | Target |
+| :--- | :--- | :--- |
+| **Storage & Queue** | Distributed Redis Streams & PostgreSQL persistent state storage | AM-CP-v3.0 |
+| **Authentication** | Enterprise OAuth2 / OIDC JWT Auth Middleware & SPIFFE mTLS | AM-CP-v3.0 |
+| **Autoscaling** | Production Helm Chart (`charts/agentmesh`) & KEDA ScaledObjects | AM-K8S-v3.0 |
+| **HITL Gateway** | Interactive Slack & Microsoft Teams HITL Approval Bot | AM-CP-v3.0 |
+| **LLM Optimization** | Vector Similarity Semantic Prompt Cache (Qdrant/Redis) | AM-CP-v3.0 |
+| **Smart Routing** | Dynamic LLM Cost-to-Complexity Model Router (Sonnet vs Llama vs GPT-4o) | AM-CP-v3.0 |
 
 ---
 
 > **Specification License:** Apache 2.0 (Open Source Infrastructure Standard)  
 > **Brand & Copyright:** © Zuctro AI (https://zuctro.ai)
+
