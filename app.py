@@ -197,6 +197,24 @@ def call_mcp_tool(request: MCPToolCallRequest):
     return mcp_gateway.call_tool(request)
 
 
+@app.post("/v1/mcp/servers")
+def register_mcp_server(payload: dict):
+    name = payload.get("name")
+    url = payload.get("endpoint_url")
+    token = payload.get("auth_token")
+    if not name or not url:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing 'name' or 'endpoint_url'")
+    mcp_gateway.register_mcp_server(name, url, token)
+    return {"status": "success", "message": f"MCP server '{name}' registered"}
+
+
+@app.post("/v1/mcp/servers/{server_name}/sync")
+def sync_mcp_server_tools(server_name: str):
+    tools = mcp_gateway.sync_remote_mcp_tools(server_name)
+    return {"status": "success", "discovered_tools": tools}
+
+
+
 @app.get("/v1/metrics/summary")
 def get_metrics_summary():
     return db.get_system_summary()

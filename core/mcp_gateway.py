@@ -1,12 +1,21 @@
+import requests
 from typing import Dict, List, Optional, Any
 from core.models import MCPTool, MCPToolCallRequest, MCPToolResult
 from core.governance import GovernanceInterceptor
+
+
+class MCPServerConfig:
+    def __init__(self, name: str, endpoint_url: str, auth_token: Optional[str] = None):
+        self.name = name
+        self.endpoint_url = endpoint_url
+        self.auth_token = auth_token
 
 
 class MCPGateway:
     def __init__(self):
         self.tools: Dict[str, MCPTool] = {}
         self.tenant_allowlists: Dict[str, List[str]] = {}
+        self.remote_mcp_servers: Dict[str, MCPServerConfig] = {}
         self._register_default_tools()
 
     def _register_default_tools(self):
@@ -42,6 +51,47 @@ class MCPGateway:
     def register_tool(self, tool: MCPTool):
         self.tools[tool.name] = tool
 
+    def register_mcp_server(self, name: str, endpoint_url: str, auth_token: Optional[str] = None):
+        """Register an external Model Context Protocol (MCP) server endpoint."""
+        self.remote_mcp_servers[name] = MCPServerConfig(name, endpoint_url, auth_token)
+
+    def sync_remote_mcp_tools(self, server_name: str) -> List[MCPTool]:
+        """Discover tools from an external standard MCP server (via tools/list JSON-RPC)."""
+        if server_name not in self.remote_mcp_servers:
+            return []
+
+        server = self.remote_mcp_servers[server_name]
+        headers = {"Content-Type": "application/json"}
+        if server.auth_token:
+            headers["Authorization"] = f"Bearer {server.auth_token}"
+
+        json_rpc_payload = {
+            "jsonrpc": "2.0",
+            "method": "tools/list",
+            "params": {},
+            "id": 1
+        }
+
+        try:
+            res = requests.post(server.endpoint_url, json=json_rpc_payload, headers=headers, timeout=5.0)
+            if res.status_code == 200:
+                data = res.json()
+                discovered = []
+                tools_list = data.get("result", {}).get("tools", [])
+                for t in tools_list:
+                    tool = MCPTool(
+                        name=t.get("name"),
+                        description=t.get("description", ""),
+                        parameters_schema=t.get("inputSchema", {})
+                    )
+                    self.register_tool(tool)
+                    discovered.append(tool)
+                return discovered
+        except Exception as e:
+            print(f"Failed to sync remote MCP server {server_name}: {e}")
+
+        return []
+
     def set_tenant_allowlist(self, tenant_id: str, allowlist: List[str]):
         self.tenant_allowlists[tenant_id] = allowlist
 
@@ -62,7 +112,7 @@ class MCPGateway:
             return MCPToolResult(
                 tool_name=request.tool_name,
                 success=False,
-                error_message=f"Tool {request.tool_name} not found in MCP registry"
+                error_message=f"Tool '{request.tool_name}' not found in MCP registry"
             )
 
         sanitized_args = {}
@@ -82,7 +132,7 @@ class MCPGateway:
             result_data={
                 "status": "EXECUTED",
                 "arguments": sanitized_args,
-                "message": f"Successfully executed MCP tool {request.tool_name}"
+                "message": f"Successfully executed MCP tool '{request.tool_name}'"
             },
             redactions=list(dict.fromkeys(all_redactions))
         )
