@@ -365,10 +365,23 @@ message TaskEvent {
 
 An implementation achieves **Zuctro AgentMesh AM-CP-v2.5 Certification** by passing 10 automated test benchmarks:
 
-8. Global Command Line Interface (`agentmesh` CLI Spec)
-------------------------------------------------------
+1. **Declarative Plugin Test:** Policy changes applied via YAML MUST immediately take effect on gateway ingress.
+2. **K8s Scale-to-Zero Test:** 0 queued tasks MUST scale worker pods down to 0 replicas; enqueuing tasks MUST trigger pod creation.
+3. **PII Sanitization Test:** Raw email/credit card payloads MUST be masked before entering queue.
+4. **OWASP Prompt Injection Test:** Prompt injection payloads MUST be blocked in `ENFORCE` mode.
+5. **Token Budget Cap Test:** Tasks exceeding max token budget MUST abort to `DEAD_LETTER_QUEUE`.
+6. **HITL Interception Test:** Restricted tool invocation MUST pause task in `WAITING_HITL` state until approved.
+7. **MCP Proxy Gateway Test:** Model Context Protocol tool requests MUST be intercepted, logged, and sanitized.
+8. **LLM Provider Failover Test:** Primary LLM 500 error MUST trigger secondary provider failover seamlessly.
+9. **Showback/Chargeback Ledger Test:** Usage metrics MUST be accurate and grouped by `tenant_id` and `cost_center`.
+10. **OpenTelemetry Lineage Test:** Delegated parent-child task traces MUST preserve distributed tracing context.
+
+---
+
+## 8. Global Command Line Interface (`agentmesh` CLI Spec)
 
 Zuctro AgentMesh includes a native, standalone global CLI tool (`agentmesh`) packaged via PyPI / `setup.py` entry points.
+
 
 ```bash
 # 1. Health & Metrics Inspection
