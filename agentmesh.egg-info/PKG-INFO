@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: agentmesh
+Version: 2.5.0
+Summary: Zuctro AgentMesh Enterprise Control Plane & Governance Gateway CLI
+Author: Zuctro AI
+Requires-Python: >=3.10
+Requires-Dist: requests>=2.31.0
+Requires-Dist: fastapi>=0.110.0
+Requires-Dist: uvicorn>=0.28.0
+Requires-Dist: pydantic>=2.6.0
+Requires-Dist: pyyaml>=6.0.1
+Requires-Dist: grpcio>=1.62.0
+Dynamic: author
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

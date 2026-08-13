@@ -61,19 +61,47 @@ source venv/bin/activate
 pip install fastapi uvicorn pydantic pyyaml hypothesis pytest httpx opentelemetry-api opentelemetry-sdk grpcio grpcio-tools pytest-asyncio
 ```
 
-### 2. Launch the REST & SSE Control Plane Gateway
+### 2. Install global `agentmesh` CLI command
+
+```bash
+pip install -e .
+```
+
+### 3. Launch the REST & SSE Control Plane Gateway & UI
 
 ```bash
 uvicorn app:app --reload --port 8000
 ```
 
-Access the interactive API documentation at `http://localhost:8000/docs` and Prometheus metrics at `http://localhost:8000/metrics`.
+Access the UI Dashboard at `http://localhost:8000/`, interactive API documentation at `http://localhost:8000/docs`, and Prometheus metrics at `http://localhost:8000/metrics`.
 
-### 3. Run the AM-CP-v2.5 Conformance & Test Suite
+### 4. Use the `agentmesh` Command Line Tool
+
+```bash
+# Check control plane status & metrics
+agentmesh status
+
+# Submit a task instruction
+agentmesh task submit -i "Scrub PII and analyze ticket JIRA-102" --agent-type data_analyst --follow
+
+# List tasks or inspect a task
+agentmesh task list
+agentmesh task inspect tsk_55436075
+
+# Manage Human-in-the-Loop (HITL) approval gate
+agentmesh hitl list
+agentmesh hitl approve tsk_af2bd402
+
+# List registered MCP tools
+agentmesh mcp list
+```
+
+### 5. Run the AM-CP-v2.5 Conformance & Test Suite
 
 ```bash
 PYTHONPATH=. pytest -v
 ```
+
 
 ---
 
