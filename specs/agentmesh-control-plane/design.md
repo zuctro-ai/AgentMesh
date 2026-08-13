@@ -371,5 +371,18 @@ tests/
 ├── test_telemetry.py           # Unit tests for OTel emitter and chargeback
 ├── test_models.py              # Property tests for JSON/YAML round-trips
 ├── test_api.py                 # Integration tests for REST endpoints (TestClient)
+├── test_cli.py                 # Unit tests for global CLI tool
 └── test_grpc.py                # Integration tests for gRPC service
 ```
+
+---
+
+## 🚀 Zuctro AgentMesh v3.0 Strategic Enterprise Roadmap
+
+1. **🔑 Enterprise Authentication & Multi-Tenant RBAC (Okta / Auth0 / Keycloak):** API Keys & Bearer JWT Validation, Granular Scopes (`agentmesh:task:submit`, `agentmesh:hitl:approve`, `agentmesh:mcp:admin`), and Tenant Cryptographic Isolation.
+2. **🗄️ Production Distributed Storage Backing (Redis & PostgreSQL):** Redis Streams / PubSub task queue, PostgreSQL audit ledger for task history, HITL decision logs, and FinOps chargeback.
+3. **☸️ Production Helm Chart & KEDA Kubernetes Auto-scaler CRD:** `charts/agentmesh` Helm deployment on EKS/GKE/AKS with KEDA ScaledObjects (`agentmesh_queued_tasks > 0`) and gVisor/Kata sandbox isolation.
+4. **🔔 Interactive Slack & Teams HITL Approval Bot:** Real-time Slack/Teams notifications when HITL triggers occur; interactive "Approve" / "Reject" buttons inside chat channels.
+5. **🧠 Semantic LLM Prompt Caching & Smart Model Router:** Vector similarity prompt caching (Redis/Qdrant) cutting token costs by up to 80%, combined with dynamic model routing (`gpt-4o-mini` vs `claude-3.5-sonnet`).
+6. **📊 Real-Time LLM Quality & Hallucination Guardrails (Eval Engine):** Automated quality scoring for completed task outputs and automatic retry/DLQ routing on hallucination thresholds.
+

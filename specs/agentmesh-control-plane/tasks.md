@@ -85,3 +85,34 @@
   - [x] 15.1 Add `register_mcp_server` and `sync_remote_mcp_tools` JSON-RPC (`tools/list`) discovery.
   - [x] 15.2 Register default Jira & Confluence tool schemas.
   - [x] 15.3 Add `POST /v1/mcp/servers` and `POST /v1/mcp/servers/{server_name}/sync` API endpoints.
+
+---
+
+## 🚀 Zuctro AgentMesh v3.0 Strategic Enterprise Roadmap
+
+- [ ] 16. Enterprise Authentication & Multi-Tenant RBAC (Okta / Auth0 / Keycloak)
+  - API Keys & Bearer JWT Validation: Secure all `/v1/tasks` and `/v1/mcp` endpoints.
+  - Granular Scopes: Role-based permissions (`agentmesh:task:submit`, `agentmesh:hitl:approve`, `agentmesh:mcp:admin`).
+  - Tenant Isolation: Hard cryptographic isolation ensuring Tenant A can never view or execute tasks/tools owned by Tenant B.
+
+- [ ] 17. Production Distributed Storage Backing (Redis & PostgreSQL)
+  - Redis Queue & State Store: Replace the in-memory queue with Redis Streams / PubSub for zero-downtime control plane restarts and high-concurrency task dispatching.
+  - PostgreSQL Audit Ledger: Durable long-term storage for task history, HITL decision logs, and FinOps financial chargeback records.
+
+- [ ] 18. Production Helm Chart & KEDA Kubernetes Auto-scaler CRD
+  - Helm Chart (`charts/agentmesh`): Single-command deployment on Kubernetes (EKS, GKE, AKS).
+  - KEDA ScaledObject Definition: Automatically scale worker agent pods from 0 to 100+ based on live Prometheus queue metrics (`agentmesh_queued_tasks > 0`).
+  - Sandboxed Container Runtime: Run worker pods inside gVisor or Kata Containers for zero-trust sandbox isolation.
+
+- [ ] 19. Interactive Slack & Teams HITL Approval Bot
+  - Real-Time Slack/Teams Notifications: When a task triggers an HITL hold state (e.g. `execute_sql_mutation`), AgentMesh sends an interactive message to a designated Slack/Teams channel.
+  - One-Click Approval: Operators can click "Approve" or "Reject" directly inside Slack to resume or cancel the task without opening the dashboard.
+
+- [ ] 20. Semantic LLM Prompt Caching & Smart Model Router
+  - Semantic Prompt Cache: Use vector similarity (Redis / Qdrant) to cache common agent sub-task responses, cutting LLM token costs by up to 80%.
+  - Cost-Optimized Model Routing: Automatically route routine tasks to lightweight models (`gpt-4o-mini`, `llama-3.1-8b`) and route complex reasoning tasks to frontier models (`claude-3.5-sonnet`, `gpt-4o`).
+
+- [ ] 21. Real-Time LLM Quality & Hallucination Guardrails (Eval Engine)
+  - Automated Quality Scoring: Score completed agent outputs for hallucinations, factual accuracy, and safety compliance before returning results to clients.
+  - Automatic Failure Recovery: If hallucination score exceeds safety thresholds, automatically trigger a task retry or route to DLQ.
+
