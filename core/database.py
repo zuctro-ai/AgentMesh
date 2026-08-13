@@ -65,6 +65,20 @@ class DatabaseStore:
     def save_chargeback(self, record: ChargebackRecord):
         self.chargeback_records.append(record)
 
+    def record_chargeback(self, tenant_id: str, cost_center: str, prompt_tokens: int, completion_tokens: int, cost_usd: float):
+        rec = ChargebackRecord(
+            task_id=f"proxy_{int(time.time()*1000)}",
+            tenant_id=tenant_id,
+            cost_center=cost_center,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+            cost_usd=cost_usd,
+            timestamp=time.time()
+        )
+        self.save_chargeback(rec)
+
+
     def get_chargeback_report(self, start_time: float = 0.0) -> dict:
         filtered = [r for r in self.chargeback_records if r.timestamp >= start_time]
         tenants_map: Dict[str, dict] = {}

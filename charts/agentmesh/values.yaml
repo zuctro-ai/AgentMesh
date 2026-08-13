@@ -1,0 +1,21 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/zuctro/agentmesh-control-plane
+  pullPolicy: IfNotPresent
+  tag: "v3.0.0"
+
+service:
+  type: ClusterIP
+  port: 8000
+  grpcPort: 50051
+
+autoscaling:
+  enabled: true
+  minReplicas: 0
+  maxReplicas: 50
+  cooldownPeriod: 30
+  pollingInterval: 15
+
+sandbox:
+  runtime: "gvisor"

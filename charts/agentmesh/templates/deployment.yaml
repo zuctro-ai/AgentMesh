@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-control-plane
+  labels:
+    app: agentmesh-control-plane
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: agentmesh-control-plane
+  template:
+    metadata:
+      labels:
+        app: agentmesh-control-plane
+    spec:
+      containers:
+        - name: control-plane
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.service.port }}
+            - containerPort: {{ .Values.service.grpcPort }}
+          env:
+            - name: AGENTMESH_PORT
+              value: "{{ .Values.service.port }}"

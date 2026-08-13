@@ -1,0 +1,6 @@
+apiVersion: v2
+name: agentmesh
+description: Zuctro AgentMesh Control Plane & KEDA ScaledWorker Helm Chart (AM-K8S-v3.0)
+type: application
+version: 3.0.0
+appVersion: 3.0.0

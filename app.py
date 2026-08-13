@@ -160,6 +160,12 @@ async def poll_task_for_worker(worker_id: str, agent_type: str):
     return {"task": task}
 
 
+from core.governance import GovernanceInterceptor
+from core.auth import auth_manager
+from core.semantic_cache import semantic_cache
+from core.model_router import smart_model_router
+from core.eval_engine import eval_engine
+
 @app.post("/v1/workers/submit-result")
 async def submit_task_result(task_id: str, status: TaskStatus, result: Optional[dict] = None,
                              error_message: Optional[str] = None, prompt_tokens: int = 0,
@@ -168,6 +174,13 @@ async def submit_task_result(task_id: str, status: TaskStatus, result: Optional[
     task = db.get_task(task_id)
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
+
+    # Real-Time LLM Quality & Hallucination Guardrails (Eval Engine)
+    if status == TaskStatus.COMPLETED and result:
+        eval_res = eval_engine.evaluate_output(task.payload.instruction, result)
+        if not eval_res.passed:
+            status = TaskStatus.FAILED
+            error_message = f"Eval Engine Rejection: {eval_res.reason}"
 
     updated_task = await orchestrator.process_task_result(
         task_id=task_id,
@@ -216,14 +229,23 @@ def sync_mcp_server_tools(server_name: str):
 
 @app.post("/v1/chat/completions")
 async def chat_completions_proxy(payload: dict, request: Request):
-    """Governed OpenAI-compatible LLM Gateway Proxy Endpoint.
-    Intercepts chat completions, enforces PII sanitization and prompt injection checks,
-    computes usage, and attributes financial chargeback.
-    """
+    """Governed OpenAI-compatible LLM Gateway Proxy Endpoint with Semantic Caching & Smart Model Routing."""
+    api_key = request.headers.get("x-api-key") or request.headers.get("authorization", "").replace("Bearer ", "")
+    user_identity = auth_manager.authenticate_api_key(api_key if api_key else None)
+    
     messages = payload.get("messages", [])
-    model = payload.get("model", "gpt-4o")
-    tenant_id = request.headers.get("x-tenant-id", "default_tenant")
-    cost_center = request.headers.get("x-cost-center", "default")
+    requested_model = payload.get("model", "auto")
+    
+    # 1. Semantic Prompt Cache check
+    cached_response = semantic_cache.get(messages)
+    if cached_response:
+        cached_response["governance"]["semantic_cache_hit"] = True
+        return cached_response
+
+    # 2. Smart Model Router
+    selected_model = smart_model_router.select_model(requested_model, messages)
+    tenant_id = user_identity.tenant_id if user_identity.tenant_id != "default" else request.headers.get("x-tenant-id", "default_tenant")
+    cost_center = user_identity.cost_center if user_identity.cost_center != "default" else request.headers.get("x-cost-center", "default")
 
     sanitized_messages = []
     total_prompt_tokens = 0
@@ -231,7 +253,8 @@ async def chat_completions_proxy(payload: dict, request: Request):
     for msg in messages:
         content = msg.get("content", "")
         if isinstance(content, str):
-            if GovernanceInterceptor.check_prompt_injection(content):
+            is_inj, _ = GovernanceInterceptor.check_prompt_injection(content)
+            if is_inj:
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="OWASP Prompt Injection detected in message content"
@@ -242,7 +265,8 @@ async def chat_completions_proxy(payload: dict, request: Request):
         else:
             sanitized_messages.append(msg)
 
-    completion_content = f"Governed response from AgentMesh LLM Proxy [{model}]: Processed query with full governance checks."
+
+    completion_content = f"Governed response from AgentMesh LLM Proxy [{selected_model}]: Processed query with full governance checks."
     completion_tokens = len(completion_content.split())
     cost_usd = (total_prompt_tokens * 0.000005) + (completion_tokens * 0.000015)
 
@@ -254,14 +278,15 @@ async def chat_completions_proxy(payload: dict, request: Request):
         cost_usd=cost_usd
     )
 
-    return {
+    response_payload = {
         "id": "chatcmpl-agentmesh-proxy",
         "object": "chat.completion",
         "created": 1786563200,
-        "model": model,
+        "model": selected_model,
         "governance": {
             "pii_redacted": True,
             "prompt_injection_checked": True,
+            "semantic_cache_hit": False,
             "cost_usd": cost_usd
         },
         "choices": [{
@@ -278,6 +303,11 @@ async def chat_completions_proxy(payload: dict, request: Request):
             "total_tokens": total_prompt_tokens + completion_tokens
         }
     }
+
+    # Store in semantic prompt cache
+    semantic_cache.set(messages, response_payload)
+    return response_payload
+
 
 
 

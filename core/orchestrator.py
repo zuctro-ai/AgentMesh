@@ -122,8 +122,19 @@ class TaskOrchestrator:
         task.hitl_trigger_tool = tool_name
         task.updated_at = time.time()
         db.save_task(task)
+
+        # Dispatch real-time Slack/Teams notification bot card
+        from core.hitl_bot import hitl_bot
+        hitl_bot.dispatch_hitl_notification(
+            task_id=task.task_id,
+            tool_name=tool_name,
+            instruction=task.payload.instruction,
+            tenant_id=task.tenant_id
+        )
+
         await self._emit_event(task, prev_status)
         return task
+
 
     async def resume_task_from_hitl(self, decision: HITLDecision) -> AgentTask:
         task = db.get_task(decision.task_id)

@@ -1,0 +1,18 @@
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ .Release.Name }}-worker-scaler
+spec:
+  scaleTargetRef:
+    name: {{ .Release.Name }}-worker-pool
+  minReplicaCount: {{ .Values.autoscaling.minReplicas }}
+  maxReplicaCount: {{ .Values.autoscaling.maxReplicas }}
+  cooldownPeriod: {{ .Values.autoscaling.cooldownPeriod }}
+  pollingInterval: {{ .Values.autoscaling.pollingInterval }}
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-k8s.monitoring.svc.cluster.local:9090
+        metricName: agentmesh_queued_tasks
+        query: sum(agentmesh_queued_tasks)
+        threshold: "1"
