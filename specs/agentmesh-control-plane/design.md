@@ -68,8 +68,12 @@ Extends the current FastAPI app with the missing endpoints:
 | `/v1/hitl/{task_id}/decision` | POST | Operator submits HITL approve/reject decision |
 | `/v1/mcp/tools` | GET | Returns RBAC-filtered MCP tool list for tenant |
 | `/v1/mcp/tools/call` | POST | Proxied MCP tool call with PII sanitization |
+| `/v1/mcp/servers` | POST | Register external remote MCP server endpoint |
+| `/v1/mcp/servers/{server_name}/sync` | POST | Discover remote MCP tools via JSON-RPC (`tools/list`) |
+| `/v1/chat/completions` | POST | Governed OpenAI-compatible LLM Gateway proxy endpoint |
 | `/v1/metrics/summary` | GET | System-level counters |
 | `/v1/metrics/chargeback` | GET | Per-tenant/cost-center usage report |
+
 
 ### 2. `core/plugins.py` — Plugin Engine
 
