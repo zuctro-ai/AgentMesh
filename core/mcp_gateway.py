@@ -43,8 +43,33 @@ class MCPGateway:
                 description="Execute read-only SQL query",
                 parameters_schema={"type": "object", "properties": {"query": {"type": "string"}}},
                 required_rbac_role="analyst"
+            ),
+            MCPTool(
+                name="jira_get_issue",
+                description="Fetch Jira ticket details by issue key (e.g. PROJ-102)",
+                parameters_schema={"type": "object", "properties": {"issue_key": {"type": "string"}}},
+                required_rbac_role="developer"
+            ),
+            MCPTool(
+                name="jira_create_issue",
+                description="Create a new Jira issue ticket",
+                parameters_schema={"type": "object", "properties": {"project_key": {"type": "string"}, "summary": {"type": "string"}, "description": {"type": "string"}}},
+                required_rbac_role="developer"
+            ),
+            MCPTool(
+                name="confluence_get_page",
+                description="Fetch page title and content from Confluence documentation workspace",
+                parameters_schema={"type": "object", "properties": {"space_key": {"type": "string"}, "title": {"type": "string"}}},
+                required_rbac_role="developer"
+            ),
+            MCPTool(
+                name="confluence_search_pages",
+                description="Search Confluence pages using CQL query",
+                parameters_schema={"type": "object", "properties": {"cql": {"type": "string"}}},
+                required_rbac_role="developer"
             )
         ]
+
         for tool in default_tools:
             self.register_tool(tool)
 
